@@ -3,6 +3,18 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+#added by adam/
+## .NET Core
+bin/
+obj/
+appsettings.Development.json
+*.user
+.vs/
+##end
+
+## API Keys & Secrets
+*.Development.json
+
 # User-specific files
 *.rsuser
 *.suo
