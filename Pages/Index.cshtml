@@ -1,10 +1,63 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Chapter Formatter";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    @if (!string.IsNullOrEmpty(Model.DebugMessage))
+    {
+        <div class="alert alert-info mb-4">
+            Debug: @Model.DebugMessage
+        </div>
+    }
+
+    <h1 class="text-3xl font-bold mb-8 text-gray-800">Chapter Formatter</h1>
+
+    <form method="post" id="formatterForm">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="inputText">Input Text</label>
+                    <textarea id="inputText"
+                              name="InputText"
+                              asp-for="InputText"
+                              class="form-control"
+                              rows="20"></textarea>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Formatted Output</label>
+                    <textarea id="outputText"
+                              name="OutputText"
+                              asp-for="OutputText"
+                              class="form-control"
+                              rows="20"
+                              readonly></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col">
+                <button type="submit" class="btn btn-primary">Process Chapter</button>
+                <button type="button" id="copyOutput" class="btn btn-secondary">Copy Output</button>
+            </div>
+        </div>
+    </form>
 </div>
+
+@section Scripts {
+    <script>
+        document.getElementById('formatterForm').addEventListener('submit', function(e) {
+            console.log('Form submitted at: ' + new Date().toString());
+            console.log('Input text length: ' + document.getElementById('inputText').value.length);
+        });
+
+        document.getElementById('copyOutput').addEventListener('click', function() {
+            const outputText = document.getElementById('outputText');
+            outputText.select();
+            document.execCommand('copy');
+        });
+    </script>
+}
