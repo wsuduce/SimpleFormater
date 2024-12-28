@@ -36,8 +36,15 @@
                               rows="20"
                               readonly></textarea>
                 </div>
+                <div class="form-group mt-4">
+                    <label>Formatted Output (Rendered)</label>
+                    <div id="rendered-output" class="border p-3 bg-light">
+                        @Html.Raw(Model.OutputText)
+                    </div>
+                </div>
             </div>
         </div>
+
         <div class="row mt-3">
             <div class="col">
                 <button type="submit" class="btn btn-primary">Process Chapter</button>
