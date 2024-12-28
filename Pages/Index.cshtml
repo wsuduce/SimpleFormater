@@ -12,47 +12,57 @@
         </div>
     }
 
-    <h1 class="text-3xl font-bold mb-8 text-gray-800">Chapter Formatter</h1>
+  
 
-    <form method="post" id="formatterForm">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="inputText">Input Text</label>
-                    <textarea id="inputText"
-                              name="InputText"
-                              asp-for="InputText"
-                              class="form-control"
-                              rows="20"></textarea>
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <h1 class="text-3xl font-bold mb-8 text-gray-800">Chapter Formatter</h1>
+
+        <form method="post" id="formatterForm">
+            <div class="row">
+                <!-- Input Section -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="inputText">Input Text</label>
+                        <textarea id="inputText"
+                                  name="InputText"
+                                  asp-for="InputText"
+                                  class="form-control"
+                                  rows="20"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label>Formatted Output</label>
-                    <textarea id="outputText"
-                              name="OutputText"
-                              asp-for="OutputText"
-                              class="form-control"
-                              rows="20"
-                              readonly></textarea>
-                </div>
-                <div class="form-group mt-4">
-                    <label>Formatted Output (Rendered)</label>
-                    <div id="rendered-output" class="border p-3 bg-light">
-                        @Html.Raw(Model.OutputText)
+
+                <!-- Rendered Output Section -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Formatted Output (Rendered)</label>
+                        <div class="output-rendered" style="border: 1px solid #ccc; padding: 10px;">
+                            @Html.Raw(Model.OutputText)
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row mt-3">
-            <div class="col">
-                <button type="submit" class="btn btn-primary">Process Chapter</button>
-                <button type="button" id="copyOutput" class="btn btn-secondary">Copy Output</button>
+            <div class="row">
+                <!-- Raw HTML Section -->
+                <div class="col-md-12 mt-4">
+                    <div class="form-group">
+                        <label>Formatted Output (Raw HTML)</label>
+                        <textarea id="rawHtmlOutput"
+                                  class="form-control"
+                                  rows="10"
+                                  readonly>@Html.Raw(Model.OutputText)</textarea>
+                    </div>
+                </div>
             </div>
-        </div>
-    </form>
-</div>
+
+            <div class="row mt-3">
+                <div class="col">
+                    <button type="submit" class="btn btn-primary">Process Chapter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
 
 @section Scripts {
     <script>

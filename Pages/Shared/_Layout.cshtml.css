@@ -46,3 +46,518 @@ button.accept-policy {
   white-space: nowrap;
   line-height: 60px;
 }
+
+
+/* added by adam */
+
+/* Global Variables */
+:root {
+    --church-blue: #0c3b78;
+    --background: #ffffff;
+    --foreground: #000000;
+    --quote-bg: #f8fafc;
+    --quote-border: #e2e8f0;
+    --quote-text: #475569;
+    --link-color: #04349d;
+    --link-hover: #1d4ed8;
+}
+
+/* Body and Base Styles */
+body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    line-height: 1.6;
+    color: var(--foreground);
+    background-color: var(--background);
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+/* Layout Styles for 3 Columns */
+/* Layout Styles for 3 Columns */
+#sidebar {
+    width: 235px;
+    background-color: #4755690a;
+    padding: 20px;
+    border-right: 1px solid #ddd;
+    box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
+    height: 100vh;
+    position: fixed;
+    overflow-y: auto;
+}
+
+#main-content {
+    margin-left: 275px; /* Leaves room for the sidebar */
+    margin-right: 320px; /* Leaves room for the reference panel */
+    padding: 30px 100px; /* Increased padding for more space around the content */
+    flex-grow: 1;
+    background-color: #f8f8f8;
+    box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
+}
+
+.bookmark-ribbon {
+    position: relative;
+    background-color: var(--church-blue); /* Blue color */
+    color: #f8f8f8;
+    text-align: center;
+    text-transform: uppercase;
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-top: 0px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+    .bookmark-ribbon::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%) rotate(180deg);
+        ;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 15px 20px 15px 0;
+        border-color: transparent white transparent transparent;
+        z-index: 1;
+    }
+/* Hamburger Menu Styles */
+.hamburger-btn {
+    display: none;
+    position: fixed;
+    top: 2px;
+    left: -4px;
+    z-index: 1000;
+    background: var(--church-blue);
+    color: white;
+    border: none;
+    padding: 4px 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.hamburger-icon {
+    display: none;
+    /* height: 20px; */
+    margin: 5px 0;
+    border-radius: 3px;
+}
+
+
+    .hamburger-icon div {
+        display: none;
+        width: 25px;
+        height: 3px;
+        background: rgb(241, 249, 246); /* Icon line color */
+        border-radius: 0px;
+        padding: 0px;
+        margin: 4px;
+        margin-left: -15px;
+    }
+
+@media (max-width: 1135px) {
+
+
+    #main-content {
+        margin-left: 350; /* Adjust the main content margin */
+        margin-right: 0; /* Adjust the right margin to hide references */
+        padding: 20px;
+    }
+
+    #reference-panel {
+        display: none; /* Completely hide the reference panel on mobile */
+    }
+}
+
+/* Sidebar Hidden by Default for Small Screens */
+@media (max-width: 768px) {
+    #sidebar {
+        display: none; /* Hidden by default */
+        position: fixed;
+        left: -275px; /* Off-screen initially */
+        top: 0;
+        color: white;
+        height: 100vh;
+        width: 70%; /* Adjust as needed */
+        background-color: #4755690a;
+        z-index: 999;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+        padding-top: 50px; /* Avoid overlapping with the hamburger button */
+        transition: left 0.3s ease-in-out; /* Smooth slide-in animation */
+    }
+
+    /* Hamburger Menu Styles */
+    .hamburger-btn {
+        display: block;
+    }
+
+    .hamburger-icon {
+        display: block;
+    }
+
+        .hamburger-icon div {
+            display: block;
+        }
+
+    #sidebar.open {
+        left: 0; /* Slide the sidebar into view */
+        display: block; /* Ensure visibility */
+        background-color: whitesmoke;
+    }
+
+    #main-content {
+        margin-left: 0; /* Remove sidebar space on mobile */
+        margin-right: 0;
+        padding: 20px;
+    }
+
+    #reference-panel {
+        display: none; /* Completely hide the reference panel on mobile */
+    }
+}
+
+
+
+#reference-panel {
+    /*padding: 15px;*/
+    /*background-color: #f9f9f9;*/
+    /*border-left: 3px solid #ccc;*/
+    position: absolute; /* Changed to absolute for better alignment */
+    right: 0;
+    top: 0;
+    width: 300px;
+    /* height: 100vh; */
+    overflow-y: auto;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Georgia', serif;
+    color: var(--church-blue);
+}
+
+h2 {
+    font-size: 2em;
+    font-weight: bold;
+    margin-bottom: 20px;
+    margin-top: 40px;
+}
+
+h3 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 16px;
+    margin-top: 30px;
+}
+
+/* Components Styling */
+
+/* Chapter Title */
+.chapter-title {
+    font-family: 'Georgia', serif;
+    font-size: 2.5em;
+    color: var(--church-blue);
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* Timeframe Information */
+.timeframe {
+    color: #6b7280; /* gray color */
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* Paragraph Styling */
+p {
+    font-family: 'Georgia', serif;
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+
+/* Blockquotes */
+blockquote {
+    background-color: var(--quote-bg);
+    border-left: 4px solid var(--quote-border);
+    padding: 20px;
+    margin: 20px 0;
+    color: var(--quote-text);
+    font-family: 'Georgia', serif;
+    font-size: 1.25rem;
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.1); /* Soft shadow for effect */
+    border-radius: 0 8px 8px 0; /* Rounded right */
+}
+
+/* Lists */
+ul {
+    list-style-type: disc;
+    margin-left: 40px;
+    margin-bottom: 20px;
+}
+
+ol {
+    list-style-type: decimal;
+    margin-left: 0px;
+    margin-bottom: 20px;
+    font-family: 'Georgia', serif;
+    color: var(--quote-text);
+}
+
+li {
+    margin-bottom: 8px;
+}
+
+/* Navigation Links */
+.nav-link {
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--link-color);
+    transition: background-color 0.3s ease;
+}
+
+    .nav-link:hover {
+        background-color: #f0f0f0;
+    }
+
+.nav-link-active {
+    background-color: #dbeafe; /* Light blue */
+    color: var(--church-blue);
+}
+
+/* References Styling */
+.reference-section {
+    background-color: #f0f4f7;
+    padding: 20px;
+    padding-top: 1px;
+    margin-top: 20px;
+    border-left: 3px solid #007bff;
+    border-right: 4px solid transparent;
+    border-radius: 5px;
+}
+
+    /* References Styling */
+    .reference-section ul {
+        margin-left: -20px;
+    }
+
+.reference-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.reference-content {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+.reference {
+    color: var(--church-blue);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+    .reference:hover {
+        text-decoration: underline;
+    }
+
+/* Special Text Elements */
+.text-emphasis {
+    font-style: italic;
+}
+
+.scripture-quote {
+    font-family: 'Georgia', serif;
+}
+
+.church-leader {
+    color: var(--church-blue);
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+    .church-leader:hover {
+        color: var(--link-hover);
+    }
+
+/* Print Styles */
+@media print {
+    #sidebar,
+    #reference-panel {
+        display: none;
+    }
+
+    blockquote {
+        page-break-inside: avoid;
+    }
+}
+
+/* Buttons */
+button.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+    button.btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+button.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+    button.btn-secondary:hover {
+        background-color: #5a6268;
+    }
+
+/* Utility Classes */
+.hidden {
+    display: none;
+}
+
+.max-w-none {
+    max-width: none;
+}
+
+.mx-0 {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Additional Utility */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+sup a {
+    text-decoration: none;
+    color: var(--church-blue);
+}
+
+    sup a:hover {
+        text-decoration: underline;
+    }
+
+/* added styles for Donna */
+/************************/
+/* Book of Mormon References */
+.bom {
+    font-style: italic;
+    color: var(--church-blue);
+}
+
+/* Scripture References */
+.scripture {
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    position: relative;
+    color: var(--quote-text);
+}
+
+    .scripture .reference-link {
+        color: var(--church-blue);
+        text-decoration: none;
+        margin-left: 4px;
+        cursor: pointer;
+    }
+
+/* Quotes and Quoters */
+.quote {
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    color: var(--quote-text);
+}
+
+.quoter {
+    font-weight: 600;
+}
+
+.quoter-link {
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px dotted #666;
+    position: relative;
+}
+
+    .quoter-link.church:hover::after {
+        content: ' ⛪';
+        font-size: 0.9em;
+    }
+
+    .quoter-link.wiki:hover::after {
+        content: ' 📖';
+        font-size: 0.9em;
+    }
+
+/* Reference Links */
+.reference-link {
+    text-decoration: none;
+    position: relative;
+}
+
+    .reference-link.external {
+        color: var(--church-blue);
+    }
+
+        .reference-link.external:hover::after {
+            content: ' ↗';
+        }
+
+    .reference-link.internal {
+        color: var(--link-color);
+    }
+
+    .reference-link:hover {
+        text-decoration: underline;
+    }
+
+.quote-attribution {
+    font-size: 0.9rem;
+    color: var(--quote-text);
+    margin-top: 10px;
+    text-align: right;
+    font-style: normal;
+}
+
+.quote-text {
+    margin-bottom: 1rem;
+    line-height: 1.8;
+}
+
+.reference-link[title]:hover::before,
+.quoter-link[title]:hover::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: var(--background);
+    border: 1px solid var(--quote-border);
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.reference-link,
+.quoter-link {
+    transition: all 0.2s ease-in-out;
+}
