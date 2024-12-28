@@ -1,8 +1,6 @@
 using Betalgo.Ranul.OpenAI.Interfaces;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
-using Betalgo.Ranul.OpenAI.ObjectModels;
 
 public class IndexModel : PageModel
 {
@@ -37,45 +35,37 @@ public class IndexModel : PageModel
     {
         try
         {
+            _logger.LogInformation("Post started at: {time}", DateTime.Now);
+            _logger.LogInformation("Input received: {length} characters", InputText?.Length ?? 0);
+
             if (string.IsNullOrWhiteSpace(InputText))
             {
                 DebugMessage = "Empty input received";
                 return Page();
             }
 
-            // Ask OpenAI to identify and format the title
-            var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
-            {
-                Messages = new List<ChatMessage>
-            {
-                ChatMessage.FromSystem("You are a helpful assistant that formats chapter titles. Return this text with html headers appropriatly around content that looks like headings."),
-                ChatMessage.FromUser($"Identify and format the chapter title and headers from this text, returning only the HTML with a chapter-title class for the title and html header tags for other headings. Use proper numbering and hierarchy:\n\n{InputText}")
-            },
-                Model = Models.Gpt_3_5_Turbo,
-                MaxTokens = 150
-            });
+            // Set output with very visible markers
+            OutputText = $@"=== PROCESSING RESULTS ===
+Time: {DateTime.Now}
+Input Length: {InputText?.Length ?? 0}
 
-            if (response.Successful)
-            {
-                string formattedTitle = response.Choices[0].Message.Content;
+RECEIVED INPUT:
+{InputText}
 
-                // Combine the formatted title with the rest of the content
-                OutputText = $"{formattedTitle}\n\n{InputText}";
+=== END PROCESSING ===";
 
-                _logger.LogInformation("Title formatting completed");
-            }
-            else
-            {
-                _logger.LogError("OpenAI error: {error}", response.Error?.Message);
-                OutputText = "Error processing title: " + response.Error?.Message;
-            }
+            DebugMessage = $"Processed at {DateTime.Now}";
+            _logger.LogInformation("Processing completed successfully");
 
+            // Force model state to be valid
+            ModelState.Clear();
             return Page();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing input");
-            OutputText = $"Error occurred: {ex.Message}";
+            _logger.LogError(ex, "Processing error occurred");
+            OutputText = $"ERROR: {ex.Message}\n\nStack Trace: {ex.StackTrace}";
+            DebugMessage = "Error occurred at " + DateTime.Now;
             return Page();
         }
     }
