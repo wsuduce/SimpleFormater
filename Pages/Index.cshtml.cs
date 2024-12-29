@@ -15,6 +15,9 @@ public class IndexModel : PageModel
     [BindProperty]
     public string OutputText { get; set; } = string.Empty;
 
+    [BindProperty]
+    public string StepTracker { get; set; } = "Starting process...";
+
     // Debug messages for tracing
     [TempData]
     public string DebugMessage { get; set; }
@@ -30,6 +33,7 @@ public class IndexModel : PageModel
         _logger.LogInformation("Page loaded");
         OutputText = string.Empty;
         DebugMessage = "Page loaded at: " + DateTime.Now;
+        StepTracker = "Ready to process.";
     }
 
     public async Task<IActionResult> OnPost()
@@ -39,40 +43,50 @@ public class IndexModel : PageModel
             if (string.IsNullOrWhiteSpace(InputText))
             {
                 DebugMessage = "Empty input received.";
+                StepTracker = "Error: No input provided.";
                 return Page();
             }
 
-            // Process Titles
+            // Step 1: Process Titles
+            StepTracker = "Step 1 of 5: Processing Titles...";
+            _logger.LogInformation(StepTracker);
             string processedText = await ProcessTitlesAsync(InputText);
 
-            // Process Scriptures
+            // Step 2: Process Scriptures
+            StepTracker = "Step 2 of 5: Processing Scriptures...";
+            _logger.LogInformation(StepTracker);
             processedText = await ProcessScripturesAsync(processedText);
 
-            //Process implicit references
+            // Step 3: Process Implicit References
+            StepTracker = "Step 3 of 5: Processing Implicit References...";
+            _logger.LogInformation(StepTracker);
             processedText = await ProcessImplicitReferencesAsync(processedText);
 
-            // Correct Reference Counters
+            // Step 4: Correct Reference Counters
+            StepTracker = "Step 4 of 5: Correcting Reference Counters...";
+            _logger.LogInformation(StepTracker);
             processedText = CorrectReferenceCounters(processedText);
 
-
-            // Process Additional Formatting
+            // Step 5: Process Additional Formatting
+            StepTracker = "Step 5 of 5: Processing Additional Formatting...";
+            _logger.LogInformation(StepTracker);
             processedText = await ProcessFormattingAsync(processedText);
 
             // Final Output
             OutputText = processedText;
-
+            StepTracker = "Processing completed successfully.";
             DebugMessage = "Processing completed successfully.";
-            _logger.LogInformation("Document processing completed successfully.");
+            _logger.LogInformation(StepTracker);
             return Page();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing document.");
             OutputText = $"Error occurred: {ex.Message}";
+            StepTracker = "Error: Process failed. Check logs.";
             return Page();
         }
     }
-
 
     // Helper method to create a global prompt
     private string GetGlobalPrompt(string taskDescription)
@@ -88,8 +102,10 @@ public class IndexModel : PageModel
 
             This is your task: {taskDescription}
 
-            Return only the modified text, preserving all other existing content and formatting. Do not make any changes unrelated to your assigned task.";
+            Return the full text including the modified formated text, preserving all other existing content and formatting. Do not make any changes unrelated to your assigned task.";
     }
+
+
 
     // Process Titles and Headings
     private async Task<string> ProcessTitlesAsync(string inputText)
@@ -107,7 +123,7 @@ public class IndexModel : PageModel
                 ChatMessage.FromUser(inputText)
             },
             Model = Models.Gpt_3_5_Turbo,
-            MaxTokens = 2500
+            MaxTokens = 4096
         });
 
         if (response.Successful)
@@ -150,7 +166,7 @@ public class IndexModel : PageModel
             ChatMessage.FromUser(inputText)
         },
             Model = Models.Gpt_3_5_Turbo,
-            MaxTokens = 2500,
+            MaxTokens = 4096,
             Temperature = (float?)0.3, // Less randomness for deterministic responses
             TopP = 1,          // Full probability space
             FrequencyPenalty = 0,
@@ -190,7 +206,7 @@ public class IndexModel : PageModel
             ChatMessage.FromUser(inputText)
         },
             Model = Models.Gpt_3_5_Turbo,
-            MaxTokens = 2500
+            MaxTokens = 4096
         });
 
         if (response.Successful)
@@ -229,7 +245,11 @@ public class IndexModel : PageModel
     // Process Additional Formatting (Paragraphs, Blockquotes, Timeframes)
     private async Task<string> ProcessFormattingAsync(string inputText)
     {
-        string prompt = GetGlobalPrompt("Break content into paragraphs or divs for readability and identify timeframes, blockquotes, or other structural elements. Add appropriate tags where necessary.");
+        string prompt = GetGlobalPrompt(
+            "Break content into paragraphs or divs for readability and identify timeframes. timeframes are wrapped in a span with the class .timeframe " +
+            "the css class .blockquotes is used for quotes from individuals. " +
+            "when we find a person that is being quoted we wrap there name in the class .church-leader." +
+            "");
 
         var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
         {
@@ -239,7 +259,7 @@ public class IndexModel : PageModel
                 ChatMessage.FromUser(inputText)
             },
             Model = Models.Gpt_3_5_Turbo,
-            MaxTokens = 1500
+            MaxTokens = 4096
         });
 
         if (response.Successful)
