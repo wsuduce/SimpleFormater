@@ -1,4 +1,4 @@
-using Betalgo.Ranul.OpenAI.Interfaces;
+﻿using Betalgo.Ranul.OpenAI.Interfaces;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
@@ -46,22 +46,22 @@ public class IndexModel : PageModel
                 return Page();
             }
 
-            // Process Titles
+            // Process Titles (1)
             string processedText = await ProcessTitlesAsync(InputText);
 
-            // Process Scriptures
+            // Process Scriptures Explicit References(2)
             processedText = await ProcessScripturesAsync(processedText);
 
-            // Process Implicit References
+            // Process Scriptures Implicit References (3)
             processedText = await ProcessImplicitReferencesAsync(processedText);
 
-            // Correct Reference Counters
+            // Correct Reference Counters (4)
             processedText = CorrectReferenceCounters(processedText);
 
-            // Process Additional Formatting
+            // Process Additional Formatting (5)
             processedText = await ProcessFormattingAsync(processedText);
 
-            // Generate Reference Section
+            // Generate Reference Section (6)
             string referenceSection = await ProcessReferencesAsync(processedText);
 
             // Append Reference Section
@@ -84,7 +84,7 @@ public class IndexModel : PageModel
 
 
 
-    // Helper method to create a global prompt
+    // Helper method to create a global prompt (0)
     private string GetGlobalPrompt(string taskDescription)
     {
         return $@"
@@ -101,7 +101,7 @@ public class IndexModel : PageModel
             Return the full text including the modified formated text, preserving all other existing content and formatting. Do not make any changes unrelated to your assigned task.";
     }
 
-    // Process Titles and Headings
+    // Process Titles and Headings (1)
     private async Task<string> ProcessTitlesAsync(string inputText)
     {
         string prompt = GetGlobalPrompt("Identify and format chapter titles and section headers and use of 'book of mormon' " +
@@ -137,7 +137,7 @@ public class IndexModel : PageModel
         }
     }
 
-    // Process Scriptures
+    // Process Scriptures Explicit References(2)
     private async Task<string> ProcessScripturesAsync(string inputText)
     {
         string prompt = GetGlobalPrompt(
@@ -182,7 +182,7 @@ public class IndexModel : PageModel
     }
 
 
-    // Process Implicit References
+    // Process Scriptures Implicit References (3)
     private async Task<string> ProcessImplicitReferencesAsync(string inputText)
     {
         string prompt = GetGlobalPrompt(
@@ -219,7 +219,7 @@ public class IndexModel : PageModel
     }
 
 
-    // Correct Reference Counters
+    // Correct Reference Counters (4)
     private string CorrectReferenceCounters(string inputText)
     {
         // Use a simple counter to replace [x] with sequential numbers
@@ -237,23 +237,31 @@ public class IndexModel : PageModel
 
 
 
-    // Process Additional Formatting (Paragraphs, Blockquotes, Timeframes)
+    // Process Additional Formatting (5) (Paragraphs, Blockquotes, Timeframes)
     private async Task<string> ProcessFormattingAsync(string inputText)
     {
         string prompt = GetGlobalPrompt(
-            "Break content into paragraphs or divs for readability and identify timeframes. timeframes are wrapped in a span with the class .timeframe " +
-            "the css class .blockquotes is used for quotes from individuals. " +
-            "when we find a person that is being quoted we wrap there name in the class .church-leader." +
-            " Important! Ensure no other changes are made to the text, and preserve all existing markup and formatting." +
-        "");
+            "Your task is to improve the formatting of the provided text for readability while preserving all existing content and markup. Follow these rules strictly:\n" +
+            "\n" +
+            "1. **Paragraphs**: Identify logical breaks in the text and ensure that each distinct idea or block of content is wrapped in a <p> tag. Avoid leaving large walls of text.\n" +
+            "2. **Timeframes**: Identify any dates or historical timeframes, and wrap them in a <span> tag with the class .timeframe. Example: <span class=\"timeframe\">92 B.C.</span>.\n" +
+            "3. **Blockquotes**: Any quotes attributed to specific individuals should be wrapped in a <div> with the class .blockquotes. Example:\n" +
+            "   <div class=\"blockquotes\">\n" +
+            "       \"In the midst of all these tribulations...\"\n" +
+            "   </div>\n" +
+            "4. **Church Leaders**: When a quote references an individual, wrap their name in a <span> tag with the class .church-leader. Example: <span class=\"church-leader\">Mark E. Petersen</span>.\n" +
+            "5. **Preserve Existing Markup**: Do not modify or remove existing HTML elements or structure unless explicitly instructed.\n" +
+            "\n" +
+            "Ensure that all changes are made logically and consistently, and return the fully formatted text. Important: Do not introduce any new content or remove existing text."
+        );
 
         var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
         {
             Messages = new List<ChatMessage>
-            {
-                ChatMessage.FromSystem(prompt),
-                ChatMessage.FromUser(inputText)
-            },
+        {
+            ChatMessage.FromSystem(prompt),
+            ChatMessage.FromUser(inputText)
+        },
             Model = Models.Gpt_3_5_Turbo,
             MaxTokens = 4096
         });
@@ -273,7 +281,7 @@ public class IndexModel : PageModel
     }
 
 
-    // Process References
+    // Generate Reference Section (6)
     private async Task<string> ProcessReferencesAsync(string inputText)
     {
         string prompt = @"
@@ -315,7 +323,7 @@ public class IndexModel : PageModel
             ChatMessage.FromUser(inputText)
         },
             Model = Models.Gpt_3_5_Turbo,
-            MaxTokens = 2500
+            MaxTokens = 4096
         });
 
         if (response.Successful)
