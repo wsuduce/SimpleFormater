@@ -9,6 +9,14 @@ public class IndexModel : PageModel
     private readonly ILogger<IndexModel> _logger;
     private readonly IOpenAIService _openAIService;
 
+    private string pass1;
+    private string pass2;
+    private string pass3;
+    private string pass4;
+    private string pass5;
+    private string pass6;
+    private string pass7;
+
     [BindProperty]
     public string InputText { get; set; } = string.Empty;
 
@@ -46,26 +54,38 @@ public class IndexModel : PageModel
                 return Page();
             }
 
-            // Process Titles (1)
-            string processedText = await ProcessTitlesAsync(InputText);
+            
 
-            // Process Scriptures Explicit References(2)
+            // Pass 0: Process Titles
+            string processedText = await MarkUnclearContentAsync(InputText);
+
+            // Pass 1: Process Titles
+            processedText = await ProcessTitlesAsync(InputText);
+
+            // Pass 2: Process Lists
+            processedText = await ProcessListsAsync(processedText);
+
+            // Pass 3: Process Quotes
+            processedText = await ProcessQuotesAsync(processedText);
+
+            // Pass 4: Process Scriptures
             processedText = await ProcessScripturesAsync(processedText);
 
-            // Process Scriptures Implicit References (3)
+            // Pass 4b: Process Implicit Scriptures
             processedText = await ProcessImplicitReferencesAsync(processedText);
 
-            // Correct Reference Counters (4)
+            // Pass 5: Correct Reference Counters
             processedText = CorrectReferenceCounters(processedText);
 
-            // Process Additional Formatting (5)
+            // Pass 6: Process General Formatting
             processedText = await ProcessFormattingAsync(processedText);
 
-            // Generate Reference Section (6)
+            // Pass 7: Generate References
             string referenceSection = await ProcessReferencesAsync(processedText);
-
-            // Append Reference Section
             processedText += $"\n{referenceSection}";
+
+
+
 
             // Final Output
             OutputText = processedText;
@@ -84,21 +104,84 @@ public class IndexModel : PageModel
 
 
 
+
     // Helper method to create a global prompt (0)
     private string GetGlobalPrompt(string taskDescription)
     {
         return $@"
-            You are part of a process that formats plain text into a structured document for scripture study. This document is processed piece by piece.
+        You are part of a process that formats plain text into a structured document for scripture study. This document is processed piece by piece.
 
-            The entire process includes:
-            1. Identifying and formatting chapter titles and section headers as well as applying the tags for the usage of 'Book of Mormon'
-            2. Identifying and tagging scriptures with <span class=""scripture""> tags and reference links.
-            3. Breaking content into paragraphs or divs for readability.
-            4. Identifying timeframes, blockquotes, and other structural elements.
+        The entire process includes:
+        1. Identifying and formatting chapter titles and section headers: 
+           - Apply <span> tags with the .chapter-title class for chapter titles (only one per chapter).
+           - Use logical HTML heading tags (e.g., <h2>, <h3>) for section headers.
+           - Wrap any instance of 'Book of Mormon' or 'The Book of Mormon' in a <span> tag with the .bom class.
+        2. Identifying and formatting scripture references:
+           - Explicit references should use <span class=""scripture""> tags and clickable links pointing to Church resources.
+           - Implicit references should be resolved by context or incremented as generic references if unresolved.
+        3. Breaking content into paragraphs or divs for readability:
+           - Ensure distinct ideas or content blocks are wrapped in appropriate <p> tags.
+        4. Identifying and formatting timeframes, blockquotes, and other structural elements:
+           - Use <span class=""timeframe""> tags for dates or historical timeframes.
+           - Use <blockquote> tags for quotes, with a nested <footer> tag for attributions.
+        5. Processing lists:
+           - Convert bullet points, dashes, or numbered lists into proper <ul> or <ol> structures with <li> tags.
+        6. Distinguishing between scripture quotes and other quotes:
+           - Scripture quotes should be identified as references and formatted accordingly.
+           - Other quotes should use <blockquote> tags with appropriate attributions in the <footer>.
+        7. Handling unfinished or unclear content:
+           - Any content wrapped in 'in-progress' tags should be preserved as is, without modification.
+           - If content is ambiguous or unclear, wrap it in a <span> tag with the .unclear-content class and leave a placeholder note (e.g., 'Unclear: Requires clarification').
+        8. Ignoring unrelated content:
+           - Do not process or modify any unrelated sections outside of the scope of the task.
 
-            This is your task: {taskDescription}
+        This is your task: {taskDescription}
 
-            Return the full text including the modified formated text, preserving all other existing content and formatting. Do not make any changes unrelated to your assigned task.";
+        Return the full text including the modified formatted text, preserving all other existing content and formatting. 
+        Do not make any changes unrelated to your assigned task.
+    ";
+    }
+
+
+
+    // First-Pass Processing to Mark Unclear or Incomplete Content (pre pass)
+    private async Task<string> MarkUnclearContentAsync(string inputText)
+    {
+        string prompt = GetGlobalPrompt(
+            "We are formating this document and you are the first pass. Some content may look incomplete. Your task is to identify incomplete or unclear content in the provided text. Follow these rules:\n" +
+            "\n" +
+            "1. Look for content that includes directives like 'ADD:', placeholder text, or ellipses indicating missing information.\n" +
+            "2. Wrap all identified unclear content in a <div> tag with the class 'in-progress'. Example:\n" +
+            "   <div class=\"in-progress\">ADD: don’t dilute gospel to spiritually mature children.</div>\n" +
+            "3. Preserve all existing content and formatting outside of unclear sections.\n" +
+            "4. Do not make any additional changes to the text."
+        );
+
+        var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+        {
+            Messages = new List<ChatMessage>
+        {
+            ChatMessage.FromSystem(prompt),
+            ChatMessage.FromUser(inputText)
+        },
+            Model = Models.Gpt_3_5_Turbo,
+            MaxTokens = 4096
+        });
+
+        if (response.Successful)
+        {
+            string result = response.Choices[0].Message.Content.Trim();
+            _logger.LogInformation("First-pass marking of unclear content completed.");
+            pass1 = response.Choices[0].Message.Content.Trim(); 
+        
+        return result;
+        }
+        else
+        {
+            _logger.LogError("Error in first-pass processing: {error}", response.Error?.Message);
+            throw new Exception("Error in first-pass processing: " + response.Error?.Message);
+        }
+
     }
 
     // Process Titles and Headings (1)
@@ -107,6 +190,7 @@ public class IndexModel : PageModel
         string prompt = GetGlobalPrompt("Identify and format chapter titles and section headers and use of 'book of mormon' " +
             "Each page chapter should have a chapter title only one time. The title should be placed in a span tag with the .chapter-title class applied." +
             "section headings should use your best guess at standard html headers.h2, h3, etc." +
+            "ignore content wrapped in the 'in-progress' tags" +
             "Any time you see Book of Mormon or The Book of Mormon wrap it in a span tag with the class .bom applied.");
 
         var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
@@ -128,6 +212,7 @@ public class IndexModel : PageModel
                 .Trim();
 
             _logger.LogInformation("Title formatting completed.");
+            pass2 = response.Choices[0].Message.Content.Trim();
             return result;
         }
         else
@@ -149,6 +234,8 @@ public class IndexModel : PageModel
             "1 Nephi 12:13: And it came to pass...\n\n" +
             "Example Output:\n" +
             "<a href=\"https://www.churchofjesuschrist.org/study/scriptures/bofm/1-ne/12.13\" class=\"reference-link external\" title=\"Read 1 Nephi 12:13 on churchofjesuschrist.org\" target=\"_blank\">1 Nephi 12:13</a>: And it came to pass... <a href=\"https://www.churchofjesuschrist.org/study/scriptures/bofm/1-ne/12.13\" class=\"reference-link external\" title=\"Read 1 Nephi 12:13 on churchofjesuschrist.org\" target=\"_blank\">[1]</a>\n\n" +
+            "ignore content wrapped in the 'in-progress' tags !Avoid truncating quotes. This ensures no perceived bias or omission.!" +
+
             "Ensure all scripture references are formatted in this way, and return the improved text. Important! Ensure no other changes are made to the text, and preserve all existing markup and formatting."
         );
 
@@ -170,7 +257,7 @@ public class IndexModel : PageModel
         if (response.Successful)
         {
             string result = response.Choices[0].Message.Content.Trim();
-
+            pass3 = response.Choices[0].Message.Content.Trim();
             _logger.LogInformation("First pass Scripture formatting completed successfully.");
             return result;
         }
@@ -186,11 +273,12 @@ public class IndexModel : PageModel
     private async Task<string> ProcessImplicitReferencesAsync(string inputText)
     {
         string prompt = GetGlobalPrompt(
-            "Identify and process implicit references in the text. Implicit references are denoted by quotes followed by brackets (e.g., [30], [31]) and may refer to scriptures or footnotes. " +
+            "You are responsible for find scriputure quotes that are implicit. Identify and process implicit references in the text. Implicit references are denoted by quotes followed by brackets most of the time. (e.g., [30], [31]) and may refer to scriptures or footnotes. " +
             "Attempt to resolve these references by context. If they refer to scriptures, convert them into clickable links similar to the following format:\n" +
             "<a href=\"https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/17.12\" class=\"reference-link external\" title=\"Read Alma 17:12 on churchofjesuschrist.org\" target=\"_blank\">[x]</a>\n" +
             "If the reference cannot be resolved to a scripture, keep it as a generic reference but ensure it is properly incremented. " +
             "Ensure all scripture references are formatted in this way, and return the improved text." +
+            "ignore content wrapped in the 'in-progress' tags. !Avoid truncating quotes. This ensures no perceived bias or omission." +
             " Important! Ensure no other changes are made to the text, and preserve all existing markup and formatting.");
 
         var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
@@ -207,7 +295,7 @@ public class IndexModel : PageModel
         if (response.Successful)
         {
             string result = response.Choices[0].Message.Content.Trim();
-
+            pass4 = response.Choices[0].Message.Content.Trim();
             _logger.LogInformation("Implicit reference processing completed.");
             return result;
         }
@@ -241,18 +329,93 @@ public class IndexModel : PageModel
     private async Task<string> ProcessFormattingAsync(string inputText)
     {
         string prompt = GetGlobalPrompt(
-            "Your task is to improve the formatting of the provided text for readability while preserving all existing content and markup. Follow these rules strictly:\n" +
+            "Your task is to format the provided text for readability without summarizing or omitting any content. Follow these rules strictly:\n" +
             "\n" +
-            "1. **Paragraphs**: Identify logical breaks in the text and ensure that each distinct idea or block of content is wrapped in a <p> tag. Avoid leaving large walls of text.\n" +
-            "2. **Timeframes**: Identify any dates or historical timeframes, and wrap them in a <span> tag with the class .timeframe. Example: <span class=\"timeframe\">92 B.C.</span>.\n" +
-            "3. **Blockquotes**: Any quotes attributed to specific individuals should be wrapped in a <div> with the class .blockquotes. Example:\n" +
-            "   <div class=\"blockquotes\">\n" +
-            "       \"In the midst of all these tribulations...\"\n" +
-            "   </div>\n" +
-            "4. **Church Leaders**: When a quote references an individual, wrap their name in a <span> tag with the class .church-leader. Example: <span class=\"church-leader\">Mark E. Petersen</span>.\n" +
-            "5. **Preserve Existing Markup**: Do not modify or remove existing HTML elements or structure unless explicitly instructed.\n" +
+            "1. **Preserve All Content**: Do not delete, summarize, or alter the meaning of any text unless explicitly instructed.\n" +
+            "2. **Paragraphs**: Identify logical breaks in the text. Wrap each distinct idea or block of content in a <p> tag to avoid large walls of text.\n" +
+
+            "4. **Timeframes**: Identify any dates or historical timeframes, and wrap them in a <span> tag with the class .timeframe. Example: <span class=\"timeframe\">92 B.C.</span>.\n" +
+            "5. **Blockquotes**: Wrap quotes in a <blockquote> tag with the class 'quote'. Include the speaker's name in a <footer> tag. Example:\n" +
+            "   <blockquote class=\"quote\">\n" +
+            "       &ldquo;The essence of the gospel of Jesus Christ entails a fundamental and permanent change...&rdquo;\n" +
+            "       <footer class=\"quote-footer\">\n" +
+            "           <span class=\"church-leader\">Elder David A. Bednar</span>\n" +
+            "       </footer>\n" +
+            "   </blockquote>\n" +
+            "6. **Church Leaders**: When a quote references an individual, wrap their name in a <span> tag with the class .church-leader. Example: <span class=\"church-leader\">Mark E. Petersen</span>.\n" +
+           
+            "8. **Preserve Existing Markup**: Do not modify or remove existing HTML elements or structure unless explicitly directed.\n" +
             "\n" +
-            "Ensure that all changes are made logically and consistently, and return the fully formatted text. Important: Do not introduce any new content or remove existing text."
+            "ignore content wrapped in the 'in-progress' tags" +
+            "Ensure all changes are logical and consistent. Return the fully formatted text, ensuring no content is omitted or summarized."
+        );
+
+
+        var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+        {
+            Messages = new List<ChatMessage>
+        {
+            ChatMessage.FromSystem(prompt),
+            ChatMessage.FromUser(inputText)
+        },
+            Model = Models.Gpt_3_5_Turbo,
+            MaxTokens = 4096
+        });
+
+        if (response.Successful)
+        {
+            string result = response.Choices[0].Message.Content.Trim();
+            pass5 = response.Choices[0].Message.Content.Trim();
+            _logger.LogInformation("Additional formatting completed.");
+            return result;
+        }
+        else
+        {
+            _logger.LogError("Error processing additional formatting: {error}", response.Error?.Message);
+            throw new Exception("Error processing additional formatting: " + response.Error?.Message);
+        }
+    }
+
+    private async Task<string> ProcessQuotesAsync(string inputText)
+    {
+        string prompt = GetGlobalPrompt(
+            "Identify and format all quotes in the text. Follow these specific instructions:\n" +
+            "\n" +
+            "1. **Scripture Quotes**:\n" +
+            "   - Identify quotes that are scripture verses or contain explicit references to scripture.\n" +
+            "   - Format scripture quotes using <span class=\"scripture\"> tags.\n" +
+            "   - Ensure scripture quotes include clickable links with the following structure:\n" +
+            "     <a href=\"https://www.churchofjesuschrist.org/study/scriptures/bofm/[book]/[chapter].[verse]\" class=\"reference-link external\" target=\"_blank\" title=\"Read [Book Chapter:Verse] on churchofjesuschrist.org\">\n" +
+            "       [Book Chapter:Verse]\n" +
+            "     </a>\n" +
+            "\n" +
+            "2. **Non-Scripture Quotes**:\n" +
+            "   - Wrap all other quotes (e.g., from church leaders or other sources) in <blockquote> tags.\n" +
+            "   - Include the name of the speaker in a nested <footer> tag. Example:\n" +
+            "     <blockquote class=\"quote\">\n" +
+            "       &ldquo;The essence of the gospel of Jesus Christ entails a fundamental and permanent change...&rdquo;\n" +
+            "       <footer class=\"quote-footer\">\n" +
+            "         <span class=\"church-leader\">Elder David A. Bednar</span>\n" +
+            "       </footer>\n" +
+            "     </blockquote>\n" +
+            "\n" +
+            "3. **Nested Quotes**:\n" +
+            "   - If a scripture quote is within a blockquote, format both appropriately.\n" +
+            "   - Example:\n" +
+            "     <blockquote class=\"quote\">\n" +
+            "       &ldquo;As stated in Alma 37:6, &lsquo;By small and simple things are great things brought to pass.&rsquo;&rdquo;\n" +
+            "       <footer class=\"quote-footer\">\n" +
+            "         <span class=\"church-leader\">Elder Dieter F. Uchtdorf</span>\n" +
+            "       </footer>\n" +
+            "     </blockquote>\n" +
+            "\n" +
+            "4. **Preserve Existing Markup**:\n" +
+            "   - Do not modify or remove any existing HTML structure or tags outside the quotes. !Avoid truncating quotes. This ensures no perceived bias or omission.\n" +
+            "\n" +
+            "5. **Ignore Incomplete Content**:\n" +
+            "   - Skip any content wrapped in 'in-progress' tags.\n" +
+            "\n" +
+            "Return the updated text, ensuring all quotes are formatted as per the instructions and preserving all existing content."
         );
 
         var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
@@ -269,16 +432,47 @@ public class IndexModel : PageModel
         if (response.Successful)
         {
             string result = response.Choices[0].Message.Content.Trim();
+            pass6 = response.Choices[0].Message.Content.Trim();
+            _logger.LogInformation("Additional formatting completed.");
+            return result;
 
+
+        }
+        else
+        {
+            throw new Exception("Error processing quotes: " + response.Error?.Message);
+        }
+    }
+
+
+
+    private async Task<string> ProcessListsAsync(string inputText)
+    {
+        string prompt = GetGlobalPrompt("Format lists in the text...");
+        var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+        {
+            Messages = new List<ChatMessage>
+        {
+            ChatMessage.FromSystem(prompt),
+            ChatMessage.FromUser(inputText)
+        },
+            Model = Models.Gpt_3_5_Turbo,
+            MaxTokens = 4096
+        });
+
+        if (response.Successful)
+        {
+            string result = response.Choices[0].Message.Content.Trim();
+            pass7 = response.Choices[0].Message.Content.Trim();
             _logger.LogInformation("Additional formatting completed.");
             return result;
         }
         else
         {
-            _logger.LogError("Error processing additional formatting: {error}", response.Error?.Message);
-            throw new Exception("Error processing additional formatting: " + response.Error?.Message);
+            throw new Exception("Error processing lists: " + response.Error?.Message);
         }
     }
+
 
 
     // Generate Reference Section (6)
@@ -294,6 +488,8 @@ public class IndexModel : PageModel
             2. Create a short summary or title for the reference based on its context or surrounding text.
             3. Format each reference as a `<li>` item within an ordered `<ul>` list.
             4. Ensure each `<li>` includes the `[x]` and links to the scripture or source.
+            5. ignore content wrapped in the 'in-progress' tags
+
 
         Example Output:
         <div class='reference-section'>
@@ -341,3 +537,5 @@ public class IndexModel : PageModel
     }
 
 }
+
+
