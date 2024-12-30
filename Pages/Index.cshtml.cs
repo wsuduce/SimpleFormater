@@ -105,8 +105,6 @@ public class IndexModel : PageModel
             Return the full text including the modified formated text, preserving all other existing content and formatting. Do not make any changes unrelated to your assigned task.";
     }
 
-
-
     // Process Titles and Headings
     private async Task<string> ProcessTitlesAsync(string inputText)
     {
