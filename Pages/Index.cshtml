@@ -59,9 +59,10 @@
         </div>
 
         <!-- Status Message and Spinner -->
-        <div id="statusMessage" class="alert alert-primary mt-3" style="display: none;">
-            <strong>Processing:</strong> <span id="statusStep">Initializing...</span>
+        <div class="alert alert-info mb-4">
+            <strong>Status:</strong> @Model.StepTracker
         </div>
+
         <div id="spinner" class="spinner-border text-primary mt-3" style="display: none;" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>

@@ -43,50 +43,46 @@ public class IndexModel : PageModel
             if (string.IsNullOrWhiteSpace(InputText))
             {
                 DebugMessage = "Empty input received.";
-                StepTracker = "Error: No input provided.";
                 return Page();
             }
 
-            // Step 1: Process Titles
-            StepTracker = "Step 1 of 5: Processing Titles...";
-            _logger.LogInformation(StepTracker);
+            // Process Titles
             string processedText = await ProcessTitlesAsync(InputText);
 
-            // Step 2: Process Scriptures
-            StepTracker = "Step 2 of 5: Processing Scriptures...";
-            _logger.LogInformation(StepTracker);
+            // Process Scriptures
             processedText = await ProcessScripturesAsync(processedText);
 
-            // Step 3: Process Implicit References
-            StepTracker = "Step 3 of 5: Processing Implicit References...";
-            _logger.LogInformation(StepTracker);
+            // Process Implicit References
             processedText = await ProcessImplicitReferencesAsync(processedText);
 
-            // Step 4: Correct Reference Counters
-            StepTracker = "Step 4 of 5: Correcting Reference Counters...";
-            _logger.LogInformation(StepTracker);
+            // Correct Reference Counters
             processedText = CorrectReferenceCounters(processedText);
 
-            // Step 5: Process Additional Formatting
-            StepTracker = "Step 5 of 5: Processing Additional Formatting...";
-            _logger.LogInformation(StepTracker);
+            // Process Additional Formatting
             processedText = await ProcessFormattingAsync(processedText);
+
+            // Generate Reference Section
+            string referenceSection = await ProcessReferencesAsync(processedText);
+
+            // Append Reference Section
+            processedText += $"\n{referenceSection}";
 
             // Final Output
             OutputText = processedText;
-            StepTracker = "Processing completed successfully.";
+
             DebugMessage = "Processing completed successfully.";
-            _logger.LogInformation(StepTracker);
+            _logger.LogInformation("Document processing completed successfully.");
             return Page();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing document.");
             OutputText = $"Error occurred: {ex.Message}";
-            StepTracker = "Error: Process failed. Check logs.";
             return Page();
         }
     }
+
+
 
     // Helper method to create a global prompt
     private string GetGlobalPrompt(string taskDescription)
@@ -194,7 +190,8 @@ public class IndexModel : PageModel
             "Attempt to resolve these references by context. If they refer to scriptures, convert them into clickable links similar to the following format:\n" +
             "<a href=\"https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/17.12\" class=\"reference-link external\" title=\"Read Alma 17:12 on churchofjesuschrist.org\" target=\"_blank\">[x]</a>\n" +
             "If the reference cannot be resolved to a scripture, keep it as a generic reference but ensure it is properly incremented. " +
-            "Ensure all scripture references are formatted in this way, and return the improved text. Important! Ensure no other changes are made to the text, and preserve all existing markup and formatting.");
+            "Ensure all scripture references are formatted in this way, and return the improved text." +
+            " Important! Ensure no other changes are made to the text, and preserve all existing markup and formatting.");
 
         var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
         {
@@ -247,7 +244,8 @@ public class IndexModel : PageModel
             "Break content into paragraphs or divs for readability and identify timeframes. timeframes are wrapped in a span with the class .timeframe " +
             "the css class .blockquotes is used for quotes from individuals. " +
             "when we find a person that is being quoted we wrap there name in the class .church-leader." +
-            "");
+            " Important! Ensure no other changes are made to the text, and preserve all existing markup and formatting." +
+        "");
 
         var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
         {
@@ -273,4 +271,65 @@ public class IndexModel : PageModel
             throw new Exception("Error processing additional formatting: " + response.Error?.Message);
         }
     }
+
+
+    // Process References
+    private async Task<string> ProcessReferencesAsync(string inputText)
+    {
+        string prompt = @"
+        Your task is to create a reference section for the following document.
+
+        Instructions:
+        - Locate all inline references in the format `[x]` (e.g., [1], [2]) in the text below.
+        - For each reference:
+            1. Extract the hyperlink or scripture associated with `[x]`.
+            2. Create a short summary or title for the reference based on its context or surrounding text.
+            3. Format each reference as a `<li>` item within an ordered `<ul>` list.
+            4. Ensure each `<li>` includes the `[x]` and links to the scripture or source.
+
+        Example Output:
+        <div class='reference-section'>
+            <h3>References</h3>
+            <ul>
+                <li id='ref1' class='reference'>
+                    <a href='https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/5.45-48' target='_blank' rel='noopener'>
+                        [1] Alma 5:45-48 - Alma's testimony of personal revelation
+                    </a>
+                </li>
+                <li id='ref2' class='reference'>
+                    <a href='https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/23.6' target='_blank' rel='noopener'>
+                        [2] Alma 23:6 - The steadfastness of Ammon's converts
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        Process the text below and generate the reference section.
+    ";
+
+        var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+        {
+            Messages = new List<ChatMessage>
+        {
+            ChatMessage.FromSystem(prompt),
+            ChatMessage.FromUser(inputText)
+        },
+            Model = Models.Gpt_3_5_Turbo,
+            MaxTokens = 2500
+        });
+
+        if (response.Successful)
+        {
+            string result = response.Choices[0].Message.Content.Trim();
+
+            _logger.LogInformation("Reference section generated successfully.");
+            return result;
+        }
+        else
+        {
+            _logger.LogError("Error generating references: {error}", response.Error?.Message);
+            throw new Exception("Error generating references: " + response.Error?.Message);
+        }
+    }
+
 }
