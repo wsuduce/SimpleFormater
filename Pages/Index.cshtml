@@ -15,74 +15,81 @@
     <h1 class="text-3xl font-bold mb-8 text-gray-800">Chapter Formatter</h1>
 
     <form method="post" id="formatterForm">
-        <div class="row">
-            <!-- Input Section -->
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="inputText">Input Text</label>
-                    <textarea id="inputText"
-                              name="InputText"
-                              asp-for="InputText"
-                              class="form-control"
-                              rows="20"></textarea>
-                </div>
-            </div>
+        <!-- Input Text Section -->
+        <div class="form-group mb-4">
+            <label for="inputText" class="font-bold">Input Text</label>
+            <textarea id="inputText"
+                      name="InputText"
+                      asp-for="InputText"
+                      class="form-control"
+                      rows="15"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Process Chapter</button>
 
-            <!-- Rendered Output Section -->
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label>Formatted Output (Rendered)</label>
-                    <div class="output-rendered" style="border: 1px solid #ccc; padding: 10px;">
-                        @Html.Raw(Model.OutputText)
-                    </div>
-                </div>
-            </div>
+
+
+        <!-- Raw HTML Section -->
+        <div class="form-group mb-4">
+            <label for="rawHtmlOutput" class="font-bold">Formatted Output (Raw HTML)</label>
+            <textarea id="rawHtmlOutput"
+                      class="form-control"
+                      rows="15"
+                      readonly>@Model.OutputText</textarea>
+            <button type="button" class="btn btn-secondary mt-2" id="copyHtmlButton">Copy HTML</button>
         </div>
 
-        <div class="row">
-            <!-- Raw HTML Section -->
-            <div class="col-md-12 mt-4">
-                <div class="form-group">
-                    <label>Formatted Output (Raw HTML)</label>
-                    <textarea id="rawHtmlOutput"
-                              class="form-control"
-                              rows="10"
-                              readonly>@Model.OutputText</textarea>
-                </div>
+        <!-- Rendered Preview Section -->
+        <div class="form-group mb-4">
+            <label class="font-bold">Formatted Output (Rendered Preview)</label>
+            <div id="outputPreview"
+                 style="border: 1px solid #ccc; padding: 10px; min-height: 200px;">
+                @Html.Raw(Model.OutputText)
             </div>
         </div>
 
-        <div class="row mt-3">
-            <div class="col">
-                <button type="submit" class="btn btn-primary">Process Chapter</button>
-            </div>
-        </div>
-
-        <!-- Status Message and Spinner -->
-        <div class="alert alert-info mb-4">
-            <strong>Status:</strong> @Model.StepTracker
-        </div>
-
+        <button type="submit" class="btn btn-primary">Process Chapter</button>
         <div id="spinner" class="spinner-border text-primary mt-3" style="display: none;" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">Processing...</span>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            <strong>Status:</strong> @Model.StepTracker
         </div>
     </form>
 </div>
 
 @section Scripts {
     <script>
-        document.getElementById('formatterForm').addEventListener('submit', function(e) {
-            // Show spinner and status message
-            document.getElementById('statusMessage').style.display = 'block';
-            document.getElementById('spinner').style.display = 'inline-block';
-            document.getElementById('statusStep').innerText = 'Initializing...';
+        // Play sound function
+        function playSound() {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            oscillator.type = 'sine'; // Sound type
+            oscillator.frequency.setValueAtTime(440, context.currentTime); // A4 note
+            oscillator.connect(context.destination);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.2); // Duration: 0.2 seconds
+        }
+
+        // Trigger sound on page load if processing has completed
+        document.addEventListener('DOMContentLoaded', () => {
+            const outputText = document.getElementById('rawHtmlOutput').value;
+            if (outputText.trim() !== "") {
+                playSound(); // Play sound only if there is output
+            }
         });
 
-        function updateStatus(message) {
-            document.getElementById('statusStep').innerText = message;
-        }
+        // Show spinner on form submission
+        document.getElementById('formatterForm').addEventListener('submit', function (e) {
+            document.getElementById('spinner').style.display = 'inline-block';
+        });
+
+        // Copy HTML functionality
+        document.getElementById('copyHtmlButton').addEventListener('click', function () {
+            const rawHtmlTextarea = document.getElementById('rawHtmlOutput');
+            rawHtmlTextarea.select(); // Highlight the text
+            document.execCommand('copy'); // Copy to clipboard
+            alert('HTML copied to clipboard!'); // Confirmation message
+        });
     </script>
-
-
-
 }
